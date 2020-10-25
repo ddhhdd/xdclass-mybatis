@@ -1,0 +1,319 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+namespace：名称空间，一般需要保持全局唯一，最好是和dao层的java接口一致，这样就可以映射sql语句到对应的方法名称和参数、返回类型；
+
+mybatis是使用接口动态代理，所以namespace必须为dao层的全路径
+-->
+<mapper namespace="net.xdclass.online_class.dao.VideoMapper">
+
+    <!-- 开启mapper的namespace下的二级缓存 -->
+    <!--
+    @param `eviction`：代表的是缓存回收策略，常见下面两种：
+        (1) LRU，最近最少使用的，移除最长时间不用的对象；
+        (2) FIFO，先进先出，按对象进入缓存的顺序来移除他们；
+    @param `flushInterval`：刷新间隔时间，单位为毫秒，这里配置的是100秒刷新，如果不配置它，当sql被执行的时候才会去刷新缓存。
+    @param `size`：引用数目，代表缓存最多可以存储多少个对象，设置过大会导致内存溢出；
+    @param `readOnly`：只读，缓存数据只能读取而不能修改，默认值是false；
+    -->
+    <cache eviction="LRU" flushInterval="100000" readOnly="true" size="1024"/>
+
+    <!--
+    @param id：指定查询列的唯一标识（查询语句需要用的时候才需要写，其它result也是一样）；
+    @param column：数据库字段的名称；
+    @param property：pojo类的属性名称；
+    注意：`<result column="video_title" property="title" jdbcType="VARCHAR" />`，其实这时候数据库中的字段也是title，
+    但归因于`title as video_title`，所以可以这么操作？
+    -->
+    <resultMap id="VideoResultMap" type="net.xdclass.online_class.domain.Video">
+        <id column="id" property="id" jdbcType="INTEGER"/>
+        <result column="video_title" property="title" jdbcType="VARCHAR"/>
+        <result column="summary" property="summary" jdbcType="VARCHAR"/>
+        <result column="cover_img" property="coverImg" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <!--
+    订单（Order）与用户（User）是一对一的关系；
+    -->
+    <resultMap id="VideoOrderResultMap" type="net.xdclass.online_class.domain.VideoOrder">
+        <id column="id" property="id" jdbcType="INTEGER"/>
+        <result column="user_id" property="userId" jdbcType="INTEGER"/>
+        <result column="out_trade_no" property="outTradeNo" jdbcType="VARCHAR"/>
+        <result column="create_time" property="createTime" jdbcType="DATE"/>
+        <result column="state" property="state" jdbcType="INTEGER"/>
+        <result column="total_fee" property="totalFee" jdbcType="INTEGER"/>
+        <result column="video_id" property="videoId" jdbcType="INTEGER"/>
+        <result column="video_title" property="videoTitle" jdbcType="VARCHAR"/>
+        <result column="video_img" property="videoImg" jdbcType="VARCHAR"/>
+        <!--
+        @param association：一对一关系的标签；
+        @param property="user"，是实体类`VideoOrder`中有`private User user;`这个属性；
+        @param javaType：`property="user"`这个属性的类型；
+        -->
+        <association property="user" javaType="net.xdclass.online_class.domain.User">
+            <id column="id" property="id" jdbcType="INTEGER"/>
+            <result column="name" property="name" jdbcType="VARCHAR"/>
+            <result column="head_img" property="headImg" jdbcType="VARCHAR"/>
+            <result column="create_time" property="createTime" jdbcType="DATE"/>
+            <result column="phone" property="phone" jdbcType="VARCHAR"/>
+        </association>
+    </resultMap>
+
+    <!-- 测试懒加载（按需加载） -->
+    <resultMap id="VideoOrderResultMapLazy" type="net.xdclass.online_class.domain.VideoOrder">
+        <id column="id" property="id" jdbcType="INTEGER"/>
+        <result column="user_id" property="userId" jdbcType="INTEGER"/>
+        <result column="out_trade_no" property="outTradeNo" jdbcType="VARCHAR"/>
+        <result column="create_time" property="createTime" jdbcType="DATE"/>
+        <result column="state" property="state" jdbcType="INTEGER"/>
+        <result column="total_fee" property="totalFee" jdbcType="INTEGER"/>
+        <result column="video_id" property="videoId" jdbcType="INTEGER"/>
+        <result column="video_title" property="videoTitle" jdbcType="VARCHAR"/>
+        <result column="video_img" property="videoImg" jdbcType="VARCHAR"/>
+        <!--
+        @param `column`：和select查询关联的字段；
+        @param `select`：指定懒加载需要执行的statement的id；
+        -->
+        <association property="user" javaType="net.xdclass.online_class.domain.User"
+                     column="user_id" select="findUserByUserId">
+        </association>
+    </resultMap>
+
+    <!--
+    用户（User）与订单（Order）是一对多的关系；
+    -->
+    <resultMap id="UserOrderResultMap" type="net.xdclass.online_class.domain.User">
+        <id column="id" property="id" jdbcType="INTEGER"/>
+        <result column="name" property="name" jdbcType="VARCHAR"/>
+        <result column="head_img" property="headImg" jdbcType="VARCHAR"/>
+        <result column="create_time" property="createTime" jdbcType="DATE"/>
+        <result column="phone" property="phone" jdbcType="VARCHAR"/>
+        <!--
+        @param collection：一对多关系的标签；
+        @param property="videoOrderList"，是实体类`User`中有`private List<VideoOrder> videoOrderList;`这个属性；
+        @param ofType：`property="videoOrderList"`这个属性的类型；
+        -->
+        <collection property="videoOrderList" ofType="net.xdclass.online_class.domain.VideoOrder">
+            <id column="order_id" property="id" jdbcType="INTEGER"/>
+            <result column="user_id" property="userId" jdbcType="INTEGER"/>
+            <result column="out_trade_no" property="outTradeNo" jdbcType="VARCHAR"/>
+            <result column="create_time" property="createTime" jdbcType="DATE"/>
+            <result column="state" property="state" jdbcType="INTEGER"/>
+            <result column="total_fee" property="totalFee" jdbcType="INTEGER"/>
+            <result column="video_id" property="videoId" jdbcType="INTEGER"/>
+            <result column="video_title" property="videoTitle" jdbcType="VARCHAR"/>
+            <result column="video_img" property="videoImg" jdbcType="VARCHAR"/>
+        </collection>
+    </resultMap>
+
+    <!-- resultMap的初步使用 -->
+    <select id="selectBasedFieldByIdWithResultMap" resultMap="VideoResultMap">
+        SELECT id, title as video_title, summary, cover_img FROM video WHERE id = #{video_id}
+    </select>
+
+    <!--
+    订单（Order）与用户（User）是一对一的关系；
+    -->
+    <select id="queryVideoOrderList" resultMap="VideoOrderResultMap">
+        SELECT
+        vo.id,
+        vo.user_id,
+        vo.out_trade_no,
+        vo.create_time,
+        vo.state,
+        vo.total_fee,
+        vo.video_id,
+        vo.video_title,
+        vo.video_img,
+        u.name,
+        u.head_img,
+        u.create_time,
+        u.phone
+        FROM video_order vo
+        LEFT JOIN `user` u ON vo.user_id = u.id
+    </select>
+
+    <!-- 测试懒加载（按需加载） -->
+    <select id="queryVideoOrderListLazy" resultMap="VideoOrderResultMapLazy">
+        SELECT
+        vo.id,
+        vo.user_id,
+        vo.out_trade_no,
+        vo.create_time,
+        vo.state,
+        vo.total_fee,
+        vo.video_id,
+        vo.video_title,
+        vo.video_img
+        FROM video_order vo
+    </select>
+    <!-- 测试懒加载（按需加载） -->
+    <select id="findUserByUserId" resultType="net.xdclass.online_class.domain.User">
+        SELECT * FROM user WHERE id = #{id}
+    </select>
+    <!--
+    用户（User）与订单（Order）是一对多的关系；
+    注意：`vo.id order_id,`这里取了别名，所以上面的resultMap中
+    <id column="order_id" property="id" jdbcType="INTEGER" />（本来数据库中的字段就是id的）
+    -->
+    <select id="queryUserOrder" resultMap="UserOrderResultMap">
+        SELECT
+        u.id,
+        u.name,
+        u.head_img,
+        u.create_time,
+        u.phone,
+        vo.id order_id,
+        vo.user_id,
+        vo.out_trade_no,
+        vo.create_time,
+        vo.state,
+        vo.total_fee,
+        vo.video_id,
+        vo.video_title,
+        vo.video_img
+        FROM `user` u
+        LEFT JOIN video_order vo ON u.id = vo.user_id
+    </select>
+
+    <!-- 定义sql片段，可以在其他地方引用 -->
+    <sql id="base_video_field">
+        id, title, summary, cover_img
+    </sql>
+    <!--
+    1. id：当前mapper下需要唯一
+    2. resultType：sql查询结果集的封装
+    3. 注意：`id = #{video_id}`，如果没有取别名`Video selectById(@Param("video_id") int videoId);`
+       则需要和入参保持一致，即`id = #{videoId}`，如果取了别名，就用别名；
+    4. 注意：一个参数的情况下，`id = #{obj}`都是可以的；
+    -->
+    <select id="selectById" resultType="net.xdclass.online_class.domain.Video" useCache="false">
+
+        <!--select * from video where id = #{video_id}-->
+        SELECT
+        <include refid="base_video_field"/>
+        FROM video WHERE id = #{video_id}
+    </select>
+
+
+    <!--
+    1. 注意多个参数的情况下，在mapper里面要取别名；
+    2. 模糊查询的写法；
+    -->
+    <select id="selectByPointAndTitleLike" resultType="net.xdclass.online_class.domain.Video">
+
+        select * from video where point = #{point} and title like concat('%',#{title},'%')
+
+    </select>
+
+    <!--
+    获取自增主键：`useGeneratedKeys="true" keyProperty="id" keyColumn="id"`；
+    会自动的将自增主键赋值到实体类`Video`中的`id`属性；
+    -->
+    <insert id="add" parameterType="net.xdclass.online_class.domain.Video"
+            useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        INSERT INTO `video`
+        (
+            `title`,
+            `summary`,
+            `cover_img`,
+            `price`,
+            `create_time`,
+            `point`
+        )
+        VALUES
+        (
+            #{title,jdbcType=VARCHAR},
+            #{summary,jdbcType=VARCHAR},
+            #{coverImg,jdbcType=VARCHAR},
+            #{price,jdbcType=INTEGER},
+            #{createTime,jdbcType=VARCHAR},
+            #{point,jdbcType=DOUBLE}
+        )
+    </insert>
+
+    <!--
+    foreach批量插入操作，注意foreach标签是写在values里面的（如下）；
+    @param collection="list"： 表示入参为List类型；
+    @param item="video"：表示list中的每个元素，需要在下面引用（如 video.title），这个名字随意取；
+    @param separator=","：表示没条插入语句是用“逗号”分割的；
+    -->
+    <insert id="addBatch" parameterType="net.xdclass.online_class.domain.Video">
+        INSERT INTO `video`
+        (
+        `title`,
+        `summary`,
+        `cover_img`,
+        `price`,
+        `create_time`,
+        `point`
+        )
+        VALUES
+        <foreach collection="list" item="video" separator=",">
+            (
+            #{video.title,jdbcType=VARCHAR},
+            #{video.summary,jdbcType=VARCHAR},
+            #{video.coverImg,jdbcType=VARCHAR},
+            #{video.price,jdbcType=INTEGER},
+            #{video.createTime,jdbcType=TIMESTAMP},
+            #{video.point,jdbcType=DOUBLE}
+            )
+        </foreach>
+    </insert>
+
+    <!-- 更新Video -->
+    <update id="updateVideo" parameterType="net.xdclass.online_class.domain.Video">
+        UPDATE `video`
+        SET
+        `title` = #{title,jdbcType=VARCHAR},
+        `summary` = #{summary,jdbcType=VARCHAR},
+        `cover_img` = #{coverImg,jdbcType=VARCHAR},
+        `price` = #{price,jdbcType=INTEGER},
+        `create_time` = #{createTime,jdbcType=TIMESTAMP},
+        `point` = #{point,jdbcType=DOUBLE}
+        WHERE
+        id = #{id}
+    </update>
+    <!--
+    选择性更新；
+    trim标签：由于是选择性更新，并不知道哪个属性在最后，所以需要以set开始，以“逗号”结束；
+    注意：<if test="coverImg != null">，这个是coverImg，而不是cover_img；
+    -->
+    <update id="updateVideoSelective" parameterType="net.xdclass.online_class.domain.Video">
+        UPDATE `video`
+        <trim prefix="set" suffixOverrides=",">
+            <if test="title != null and title != ''">
+                `title` = #{title,jdbcType=VARCHAR},
+            </if>
+
+            <if test="summary != null">`summary` = #{summary,jdbcType=VARCHAR},</if>
+
+            <if test="coverImg != null">`cover_img` = #{coverImg,jdbcType=VARCHAR},</if>
+
+            <if test="price != 0">`price` = #{price,jdbcType=INTEGER},</if>
+
+            <if test="createTime != null">`create_time` = #{createTime,jdbcType=TIMESTAMP},</if>
+
+            <if test="point != null">`point` = #{point,jdbcType=DOUBLE}</if>
+        </trim>
+        WHERE
+        id = #{id}
+    </update>
+
+    <!--
+    根据create_time和price删除Video；
+    注意：需要使用大于、小于号需要进行转义；
+     -->
+    <delete id="deleteByCreateTimeAndPrice" parameterType="java.util.Map">
+        DELETE FROM video
+        WHERE
+        `create_time` <![CDATA[ > ]]> #{createTime}
+        AND
+        `price` <![CDATA[ >= ]]>  #{price}
+    </delete>
+
+
+</mapper>
